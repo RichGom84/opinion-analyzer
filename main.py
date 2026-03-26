@@ -446,8 +446,12 @@ PLEDGE_HTML = """<!DOCTYPE html>
   header .logo { display: flex; align-items: center; gap: 12px; }
   header h1 { font-size: 22px; font-weight: 700; }
   header span { font-size: 13px; opacity: 0.6; }
-  header a.back { color: #93c5fd; font-size: 13px; text-decoration: none; }
-  header a.back:hover { text-decoration: underline; }
+  header a.back {
+    color: #fff; font-size: 14px; font-weight: 600; text-decoration: none;
+    background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px;
+    transition: background .2s; white-space: nowrap;
+  }
+  header a.back:hover { background: rgba(255,255,255,0.25); }
 
   .container { max-width: 900px; margin: 40px auto; padding: 0 24px; }
 
@@ -609,9 +613,9 @@ PLEDGE_HTML = """<!DOCTYPE html>
     display: flex; justify-content: space-between; align-items: center;
     gap: 24px; flex-wrap: wrap;
   }
-  .footer-info .name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-  .footer-info .role { font-size: 13px; opacity: 0.6; margin-bottom: 12px; }
-  .footer-info .email a { font-size: 13px; color: #93c5fd; text-decoration: none; }
+  .footer-info .name { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .footer-info .role { font-size: 16px; opacity: 0.7; margin-bottom: 14px; }
+  .footer-info .email a { font-size: 15px; color: #93c5fd; text-decoration: none; }
   .footer-links { display: flex; gap: 12px; flex-wrap: wrap; }
   .footer-links a {
     display: flex; align-items: center; gap: 8px;
@@ -904,8 +908,11 @@ function renderResults(data, candidate, region) {
 
   // 하단에 다시 생성 버튼 추가
   container.innerHTML += `
-    <div style="text-align:center;margin-top:8px">
-      <button onclick="resetForm()" style="padding:12px 32px;background:#f1f5f9;border:none;border-radius:10px;font-size:14px;font-weight:600;color:#374151;cursor:pointer;">
+    <div style="text-align:center;margin-top:8px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="/" style="padding:12px 28px;background:#16213e;border-radius:10px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        ← 여론 분석으로 돌아가기
+      </a>
+      <button onclick="resetForm()" style="padding:12px 28px;background:#f1f5f9;border:none;border-radius:10px;font-size:14px;font-weight:600;color:#374151;cursor:pointer;">
         ↩ 다시 생성하기
       </button>
     </div>
