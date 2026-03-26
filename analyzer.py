@@ -1,14 +1,13 @@
 """
 여론 분석 모듈
-- 언급량 집계
-- 긍/부정 감성 분석 (키워드 기반)
+- 언급량 집계 (네이버 + 유튜브)
+- 긍/부정 감성 분석
 - 연관 키워드 추출
 """
 
 import re
 from collections import Counter
 
-# ── 감성 사전 (한국 정치 여론 특화) ──────────────────────────────────
 POSITIVE_WORDS = [
     "지지", "응원", "훌륭", "탁월", "기대", "신뢰", "믿음", "최고", "잘한다",
     "좋다", "좋아", "훌륭하다", "성공", "업적", "공약", "실천", "추진", "개혁",
@@ -23,7 +22,6 @@ NEGATIVE_WORDS = [
     "실언", "망언", "악화", "퇴행", "적폐", "역풍", "열세",
 ]
 
-# ── 불용어 (빈도 분석 제외) ───────────────────────────────────────────
 STOPWORDS = {
     "있다", "없다", "하다", "이다", "것이다", "되다", "이", "그", "저",
     "및", "또", "등", "또한", "그리고", "하지만", "그러나", "그래서",
@@ -33,7 +31,6 @@ STOPWORDS = {
 
 
 def clean_text(html_text: str) -> str:
-    """HTML 태그 및 특수문자 제거"""
     text = re.sub(r"<[^>]+>", " ", html_text)
     text = re.sub(r"[^\w\s가-힣]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -41,23 +38,19 @@ def clean_text(html_text: str) -> str:
 
 
 def extract_keywords(texts: list[str], top_n: int = 20) -> list[dict]:
-    """2글자 이상 한글 단어 빈도 추출"""
     all_words = []
     for text in texts:
         cleaned = clean_text(text)
         words = re.findall(r"[가-힣]{2,6}", cleaned)
         all_words.extend([w for w in words if w not in STOPWORDS])
-
     counter = Counter(all_words)
     return [{"word": w, "count": c} for w, c in counter.most_common(top_n)]
 
 
 def score_sentiment(text: str) -> str:
-    """텍스트 감성 판별: positive / negative / neutral"""
     cleaned = clean_text(text)
     pos = sum(1 for w in POSITIVE_WORDS if w in cleaned)
     neg = sum(1 for w in NEGATIVE_WORDS if w in cleaned)
-
     if pos > neg:
         return "positive"
     elif neg > pos:
@@ -67,32 +60,35 @@ def score_sentiment(text: str) -> str:
 
 
 def analyze(raw_data: dict) -> dict:
-    """
-    수집 데이터 전체 분석
-    """
     candidate = raw_data["candidate"]
     news = raw_data.get("news", [])
     blogs = raw_data.get("blogs", [])
     cafes = raw_data.get("cafes", [])
     trend = raw_data.get("trend", {})
+    youtube = raw_data.get("youtube", {})
 
-    all_items = news + blogs + cafes
+    all_naver = news + blogs + cafes
+    yt_comments = youtube.get("all_comments", [])
 
     # ── 1. 언급량 ────────────────────────────────────────────────────
     mention_count = {
         "news": len(news),
         "blog": len(blogs),
         "cafe": len(cafes),
-        "total": len(all_items),
+        "youtube_video": youtube.get("video_count", 0),
+        "youtube_comment": youtube.get("comment_count", 0),
+        "total": len(all_naver) + youtube.get("comment_count", 0),
     }
 
-    # ── 2. 감성 분석 ─────────────────────────────────────────────────
+    # ── 2. 감성 분석 (네이버 + 유튜브 댓글 통합) ─────────────────────
     sentiment_counts = Counter()
-    for item in all_items:
-        title = item.get("title", "")
-        description = item.get("description", "")
-        sentiment = score_sentiment(title + " " + description)
-        sentiment_counts[sentiment] += 1
+
+    for item in all_naver:
+        text = item.get("title", "") + " " + item.get("description", "")
+        sentiment_counts[score_sentiment(text)] += 1
+
+    for comment in yt_comments:
+        sentiment_counts[score_sentiment(comment.get("text", ""))] += 1
 
     total = sum(sentiment_counts.values()) or 1
     sentiment_ratio = {
@@ -101,16 +97,17 @@ def analyze(raw_data: dict) -> dict:
         "neutral": round(sentiment_counts["neutral"] / total * 100, 1),
     }
 
-    # ── 3. 연관 키워드 ────────────────────────────────────────────────
+    # ── 3. 연관 키워드 (네이버 + 유튜브 댓글) ────────────────────────
     texts = []
-    for item in all_items:
+    for item in all_naver:
         texts.append(item.get("title", "") + " " + item.get("description", ""))
+    for comment in yt_comments:
+        texts.append(comment.get("text", ""))
 
     keywords = extract_keywords(texts, top_n=20)
-    # 후보자 이름 자체는 제외
     keywords = [k for k in keywords if candidate not in k["word"]][:15]
 
-    # ── 4. 트렌드 데이터 가공 ─────────────────────────────────────────
+    # ── 4. 트렌드 ────────────────────────────────────────────────────
     trend_data = [
         {"date": d["period"], "ratio": d["ratio"]}
         for d in trend.get("data", [])
@@ -127,6 +124,32 @@ def analyze(raw_data: dict) -> dict:
         for item in news[:5]
     ]
 
+    # ── 6. 유튜브 영상 (썸네일 포함) ─────────────────────────────────
+    yt_videos = [
+        {
+            "title": v.get("title", ""),
+            "channel": v.get("channel", ""),
+            "published_at": v.get("published_at", ""),
+            "url": v.get("url", ""),
+            "thumbnail": v.get("thumbnail", ""),
+            "comment_count": len(v.get("comments", [])),
+        }
+        for v in youtube.get("videos", [])
+    ]
+
+    # ── 7. 유튜브 인기 댓글 TOP 5 ────────────────────────────────────
+    all_comments_sorted = sorted(
+        yt_comments, key=lambda x: x.get("like_count", 0), reverse=True
+    )
+    top_comments = [
+        {
+            "text": clean_text(c.get("text", ""))[:120],
+            "like_count": c.get("like_count", 0),
+            "sentiment": score_sentiment(c.get("text", "")),
+        }
+        for c in all_comments_sorted[:5]
+    ]
+
     return {
         "candidate": candidate,
         "collected_at": raw_data.get("collected_at", ""),
@@ -135,4 +158,6 @@ def analyze(raw_data: dict) -> dict:
         "keywords": keywords,
         "trend": trend_data,
         "recent_news": recent_news,
+        "youtube_videos": yt_videos,
+        "top_comments": top_comments,
     }

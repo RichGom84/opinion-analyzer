@@ -4,17 +4,13 @@
 접속: http://localhost:8000
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-import json
-
 from collector import collect_all
 from analyzer import analyze
 
 app = FastAPI(title="여론 분석 서비스")
 
-
-# ── 대시보드 HTML (인라인) ─────────────────────────────────────────────
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -31,8 +27,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .search-bar form { display: flex; gap: 12px; max-width: 600px; }
   .search-bar input {
     flex: 1; padding: 12px 18px; border: 2px solid #e0e0e0;
-    border-radius: 8px; font-size: 16px; outline: none;
-    transition: border-color .2s;
+    border-radius: 8px; font-size: 16px; outline: none; transition: border-color .2s;
   }
   .search-bar input:focus { border-color: #3b82f6; }
   .search-bar button {
@@ -46,21 +41,16 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .results { display: none; }
 
   /* 카드 그리드 */
-  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-  .card {
-    background: #fff; border-radius: 12px; padding: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  }
-  .card .label { font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 500; }
-  .card .value { font-size: 32px; font-weight: 800; color: #1e293b; }
-  .card .sub { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  .cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .card .label { font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 500; }
+  .card .value { font-size: 28px; font-weight: 800; color: #1e293b; }
+  .card .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .card.yt { background: #fff8f8; }
 
-  /* 2열 레이아웃 */
+  /* 2열 */
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-  .panel {
-    background: #fff; border-radius: 12px; padding: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  }
+  .panel { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
   .panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: #1e293b; }
 
   /* 감성 바 */
@@ -72,42 +62,51 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .legend-item { display: flex; align-items: center; gap: 6px; }
   .dot { width: 10px; height: 10px; border-radius: 50%; }
 
-  /* 키워드 태그 */
+  /* 키워드 */
   .keyword-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
-  .keyword-tag {
-    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
-    background: #eff6ff; color: #2563eb; cursor: default;
-  }
+  .keyword-tag { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; background: #eff6ff; color: #2563eb; }
 
-  /* 트렌드 차트 */
-  .trend-chart { width: 100%; height: 120px; position: relative; }
-  canvas { width: 100% !important; }
+  /* 트렌드 */
+  .full { margin-bottom: 24px; }
 
-  /* 최신 뉴스 */
+  /* 뉴스 */
   .news-list { list-style: none; }
-  .news-list li {
-    padding: 12px 0; border-bottom: 1px solid #f1f5f9;
-    display: flex; flex-direction: column; gap: 4px;
-  }
+  .news-list li { padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 4px; }
   .news-list li:last-child { border-bottom: none; }
   .news-list a { font-size: 14px; font-weight: 600; color: #1e40af; text-decoration: none; }
   .news-list a:hover { text-decoration: underline; }
   .news-list .desc { font-size: 12px; color: #64748b; }
   .news-list .date { font-size: 11px; color: #94a3b8; }
 
-  /* 전체 너비 패널 */
-  .full { margin-bottom: 24px; }
+  /* 유튜브 영상 그리드 */
+  .yt-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .yt-card { border-radius: 8px; overflow: hidden; background: #f8fafc; }
+  .yt-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+  .yt-card .yt-info { padding: 10px; }
+  .yt-card .yt-title { font-size: 12px; font-weight: 600; color: #1e293b; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .yt-card .yt-channel { font-size: 11px; color: #64748b; }
+  .yt-card .yt-meta { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+  .yt-card a { text-decoration: none; }
+
+  /* 유튜브 댓글 */
+  .comment-list { list-style: none; }
+  .comment-list li { padding: 12px; border-radius: 8px; background: #f8fafc; margin-bottom: 8px; }
+  .comment-list .c-text { font-size: 13px; color: #1e293b; margin-bottom: 6px; line-height: 1.5; }
+  .comment-list .c-meta { display: flex; gap: 12px; font-size: 11px; color: #94a3b8; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge.pos { background: #dcfce7; color: #16a34a; }
+  .badge.neg { background: #fee2e2; color: #dc2626; }
+  .badge.neu { background: #f1f5f9; color: #64748b; }
 
   .empty { text-align: center; padding: 80px 0; color: #94a3b8; }
   .empty .emoji { font-size: 48px; margin-bottom: 16px; }
-  .empty p { font-size: 16px; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>📊 여론 분석 서비스</h1>
-  <span>네이버 뉴스 · 블로그 · 카페 · DataLab 기반</span>
+  <span>네이버 뉴스·블로그·카페·DataLab + YouTube 기반</span>
 </header>
 
 <div class="search-bar">
@@ -118,27 +117,37 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 </div>
 
 <div class="container">
-  <div class="loading" id="loading">⏳ 데이터를 수집하고 분석 중입니다...</div>
+  <div class="loading" id="loading">⏳ 네이버 + YouTube 데이터를 수집하고 분석 중입니다...</div>
 
   <div class="results" id="results">
     <div class="cards" id="mentionCards"></div>
     <div class="row2">
-      <div class="panel" id="sentimentPanel">
+      <div class="panel">
         <h3>😊 감성 분석</h3>
         <div id="sentimentContent"></div>
       </div>
-      <div class="panel" id="keywordPanel">
+      <div class="panel">
         <h3>🔑 연관 키워드 TOP 15</h3>
         <div id="keywordContent"></div>
       </div>
     </div>
-    <div class="panel full" id="trendPanel">
+    <div class="panel full">
       <h3>📈 검색량 트렌드 (최근 30일)</h3>
       <div id="trendContent"></div>
     </div>
-    <div class="panel full" id="newsPanel">
-      <h3>📰 최신 뉴스</h3>
-      <ul class="news-list" id="newsList"></ul>
+    <div class="row2">
+      <div class="panel">
+        <h3>📰 최신 뉴스</h3>
+        <ul class="news-list" id="newsList"></ul>
+      </div>
+      <div class="panel">
+        <h3>💬 YouTube 인기 댓글 TOP 5</h3>
+        <ul class="comment-list" id="commentList"></ul>
+      </div>
+    </div>
+    <div class="panel full">
+      <h3>▶️ YouTube 관련 영상</h3>
+      <div class="yt-grid" id="ytGrid"></div>
     </div>
   </div>
 
@@ -161,17 +170,11 @@ async function analyze(e) {
   try {
     const res = await fetch('/analyze?candidate=' + encodeURIComponent(name));
     const data = await res.json();
-
-    if (data.error) {
-      alert('오류: ' + data.error);
-      return;
-    }
-
+    if (data.error) { alert('오류: ' + data.error); return; }
     renderResults(data);
     document.getElementById('results').style.display = 'block';
   } catch (err) {
     alert('서버 오류가 발생했습니다.');
-    console.error(err);
   } finally {
     document.getElementById('loading').style.display = 'none';
   }
@@ -180,26 +183,12 @@ async function analyze(e) {
 function renderResults(data) {
   const m = data.mention_count;
   document.getElementById('mentionCards').innerHTML = `
-    <div class="card">
-      <div class="label">총 언급량</div>
-      <div class="value">${m.total.toLocaleString()}</div>
-      <div class="sub">건</div>
-    </div>
-    <div class="card">
-      <div class="label">📰 뉴스</div>
-      <div class="value">${m.news.toLocaleString()}</div>
-      <div class="sub">건</div>
-    </div>
-    <div class="card">
-      <div class="label">✍️ 블로그</div>
-      <div class="value">${m.blog.toLocaleString()}</div>
-      <div class="sub">건</div>
-    </div>
-    <div class="card">
-      <div class="label">☕ 카페</div>
-      <div class="value">${m.cafe.toLocaleString()}</div>
-      <div class="sub">건</div>
-    </div>
+    <div class="card"><div class="label">총 언급량</div><div class="value">${m.total.toLocaleString()}</div><div class="sub">건</div></div>
+    <div class="card"><div class="label">📰 뉴스</div><div class="value">${m.news.toLocaleString()}</div><div class="sub">건</div></div>
+    <div class="card"><div class="label">✍️ 블로그</div><div class="value">${m.blog.toLocaleString()}</div><div class="sub">건</div></div>
+    <div class="card"><div class="label">☕ 카페</div><div class="value">${m.cafe.toLocaleString()}</div><div class="sub">건</div></div>
+    <div class="card yt"><div class="label">▶️ YT 영상</div><div class="value">${m.youtube_video}</div><div class="sub">개</div></div>
+    <div class="card yt"><div class="label">💬 YT 댓글</div><div class="value">${m.youtube_comment.toLocaleString()}</div><div class="sub">개</div></div>
   `;
 
   const s = data.sentiment_ratio;
@@ -210,31 +199,57 @@ function renderResults(data) {
       <div class="neu" style="width:${s.neutral}%"></div>
     </div>
     <div class="sentiment-legend">
-      <div class="legend-item"><div class="dot" style="background:#22c55e"></div> 긍정 ${s.positive}%</div>
-      <div class="legend-item"><div class="dot" style="background:#ef4444"></div> 부정 ${s.negative}%</div>
-      <div class="legend-item"><div class="dot" style="background:#94a3b8"></div> 중립 ${s.neutral}%</div>
+      <div class="legend-item"><div class="dot" style="background:#22c55e"></div>긍정 ${s.positive}%</div>
+      <div class="legend-item"><div class="dot" style="background:#ef4444"></div>부정 ${s.negative}%</div>
+      <div class="legend-item"><div class="dot" style="background:#94a3b8"></div>중립 ${s.neutral}%</div>
     </div>
   `;
 
-  const kwHtml = data.keywords.map(k =>
-    `<span class="keyword-tag">${k.word} <small style="opacity:.6">${k.count}</small></span>`
-  ).join('');
-  document.getElementById('keywordContent').innerHTML = `<div class="keyword-cloud">${kwHtml}</div>`;
+  document.getElementById('keywordContent').innerHTML = `
+    <div class="keyword-cloud">
+      ${data.keywords.map(k => `<span class="keyword-tag">${k.word} <small style="opacity:.6">${k.count}</small></span>`).join('')}
+    </div>`;
 
-  if (data.trend && data.trend.length > 0) {
-    renderTrendChart(data.trend);
-  } else {
-    document.getElementById('trendContent').innerHTML = '<p style="color:#94a3b8;font-size:13px">트렌드 데이터 없음</p>';
-  }
+  if (data.trend && data.trend.length > 0) renderTrendChart(data.trend);
+  else document.getElementById('trendContent').innerHTML = '<p style="color:#94a3b8;font-size:13px">트렌드 데이터 없음</p>';
 
-  const newsHtml = data.recent_news.map(n => `
+  document.getElementById('newsList').innerHTML = data.recent_news.map(n => `
     <li>
       <a href="${n.link}" target="_blank">${n.title}</a>
       <span class="desc">${n.description}</span>
       <span class="date">${n.pubDate}</span>
-    </li>
-  `).join('');
-  document.getElementById('newsList').innerHTML = newsHtml || '<li style="color:#94a3b8">뉴스 없음</li>';
+    </li>`).join('') || '<li style="color:#94a3b8">뉴스 없음</li>';
+
+  const sentimentBadge = s => {
+    if (s === 'positive') return '<span class="badge pos">긍정</span>';
+    if (s === 'negative') return '<span class="badge neg">부정</span>';
+    return '<span class="badge neu">중립</span>';
+  };
+
+  document.getElementById('commentList').innerHTML = data.top_comments.length
+    ? data.top_comments.map(c => `
+      <li>
+        <div class="c-text">${c.text}</div>
+        <div class="c-meta">
+          ${sentimentBadge(c.sentiment)}
+          <span>👍 ${c.like_count.toLocaleString()}</span>
+        </div>
+      </li>`).join('')
+    : '<li style="color:#94a3b8;font-size:13px">댓글 없음</li>';
+
+  document.getElementById('ytGrid').innerHTML = data.youtube_videos.length
+    ? data.youtube_videos.map(v => `
+      <div class="yt-card">
+        <a href="${v.url}" target="_blank">
+          <img src="${v.thumbnail}" alt="${v.title}" onerror="this.style.display='none'">
+          <div class="yt-info">
+            <div class="yt-title">${v.title}</div>
+            <div class="yt-channel">${v.channel}</div>
+            <div class="yt-meta">💬 ${v.comment_count}개 · ${v.published_at}</div>
+          </div>
+        </a>
+      </div>`).join('')
+    : '<p style="color:#94a3b8;font-size:13px">영상 없음</p>';
 }
 
 function renderTrendChart(trendData) {
@@ -242,25 +257,19 @@ function renderTrendChart(trendData) {
   container.innerHTML = '<canvas id="trendCanvas" height="120"></canvas>';
   const canvas = document.getElementById('trendCanvas');
   const ctx = canvas.getContext('2d');
-
   canvas.width = container.offsetWidth || 600;
   canvas.height = 120;
 
   const values = trendData.map(d => d.ratio);
-  const labels = trendData.map(d => d.date.slice(5)); // MM-DD
+  const labels = trendData.map(d => d.date.slice(5));
   const max = Math.max(...values) || 1;
-  const w = canvas.width;
-  const h = canvas.height;
+  const w = canvas.width, h = canvas.height;
   const pad = { l: 40, r: 10, t: 10, b: 30 };
-  const innerW = w - pad.l - pad.r;
-  const innerH = h - pad.t - pad.b;
+  const innerW = w - pad.l - pad.r, innerH = h - pad.t - pad.b;
   const step = innerW / (values.length - 1 || 1);
 
   ctx.clearRect(0, 0, w, h);
-
-  // 그리드 라인
-  ctx.strokeStyle = '#f1f5f9';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1;
   [0, 0.5, 1].forEach(r => {
     const y = pad.t + innerH * (1 - r);
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
@@ -268,46 +277,36 @@ function renderTrendChart(trendData) {
     ctx.fillText(Math.round(max * r), pad.l - 4, y + 4);
   });
 
-  // 채우기
   const gradient = ctx.createLinearGradient(0, pad.t, 0, pad.t + innerH);
   gradient.addColorStop(0, 'rgba(59,130,246,0.3)');
   gradient.addColorStop(1, 'rgba(59,130,246,0)');
 
   ctx.beginPath();
   values.forEach((v, i) => {
-    const x = pad.l + i * step;
-    const y = pad.t + innerH * (1 - v / max);
+    const x = pad.l + i * step, y = pad.t + innerH * (1 - v / max);
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
   ctx.lineTo(pad.l + (values.length - 1) * step, pad.t + innerH);
   ctx.lineTo(pad.l, pad.t + innerH);
   ctx.closePath();
-  ctx.fillStyle = gradient;
-  ctx.fill();
+  ctx.fillStyle = gradient; ctx.fill();
 
-  // 선
-  ctx.beginPath();
-  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
   values.forEach((v, i) => {
-    const x = pad.l + i * step;
-    const y = pad.t + innerH * (1 - v / max);
+    const x = pad.l + i * step, y = pad.t + innerH * (1 - v / max);
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
   ctx.stroke();
 
-  // x축 레이블 (7일 간격)
   ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
   labels.forEach((label, i) => {
-    if (i % 7 === 0 || i === labels.length - 1) {
-      const x = pad.l + i * step;
-      ctx.fillText(label, x, h - 6);
-    }
+    if (i % 7 === 0 || i === labels.length - 1)
+      ctx.fillText(label, pad.l + i * step, h - 6);
   });
 }
 </script>
 </body>
-</html>
-"""
+</html>"""
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -319,7 +318,6 @@ async def dashboard():
 async def analyze_candidate(candidate: str):
     if not candidate or len(candidate.strip()) < 1:
         return {"error": "후보자 이름을 입력해주세요."}
-
     try:
         raw_data = collect_all(candidate.strip())
         result = analyze(raw_data)
