@@ -196,6 +196,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <h3>▶️ YouTube 관련 영상</h3>
       <div class="yt-grid" id="ytGrid"></div>
     </div>
+    <div id="pledgeBanner" style="display:none;margin-bottom:24px;"></div>
   </div>
 
   <div class="empty" id="emptyState">
@@ -321,6 +322,22 @@ function renderResults(data) {
         </a>
       </div>`).join('')
     : '<p style="color:#94a3b8;font-size:13px">영상 없음</p>';
+
+  // 공약 생성기 연결 버튼
+  const name = document.getElementById('candidateInput').value.trim();
+  const pledgeBanner = document.getElementById('pledgeBanner');
+  pledgeBanner.innerHTML = `
+    <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+      <div>
+        <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:6px;">🗳️ 이 여론 데이터로 맞춤형 공약을 만들어보세요</div>
+        <div style="color:rgba(255,255,255,0.8);font-size:14px;">GPT가 심각성·확산성·시급성 기준으로 최우선 이슈 3가지와 5W1H 공약·슬로건·스토리텔링을 자동 생성합니다</div>
+      </div>
+      <a href="/pledge?candidate=${encodeURIComponent(name)}" style="background:#fff;color:#6366f1;padding:13px 28px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">
+        ✨ 공약 자동 생성하기 →
+      </a>
+    </div>
+  `;
+  pledgeBanner.style.display = 'block';
 }
 
 function renderTrendChart(trendData) {
@@ -704,6 +721,15 @@ PLEDGE_HTML = """<!DOCTYPE html>
 <script>
 let selectedPersona = '전체 유권자';
 let stepTimer = null;
+
+// URL 파라미터에서 후보자 이름 자동 입력
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const candidate = params.get('candidate');
+  if (candidate) {
+    document.getElementById('candidateInput').value = candidate;
+  }
+});
 
 function selectPersona(btn) {
   document.querySelectorAll('.persona-btn').forEach(b => b.classList.remove('active'));
