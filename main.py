@@ -100,6 +100,45 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
   .empty { text-align: center; padding: 80px 0; color: #94a3b8; }
   .empty .emoji { font-size: 48px; margin-bottom: 16px; }
+
+  /* 푸터 */
+  footer {
+    background: #16213e; color: #fff;
+    padding: 40px;
+    margin-top: 48px;
+  }
+  .footer-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 24px; flex-wrap: wrap;
+  }
+  .footer-info .name {
+    font-size: 18px; font-weight: 700; margin-bottom: 4px;
+  }
+  .footer-info .role {
+    font-size: 13px; opacity: 0.6; margin-bottom: 12px;
+  }
+  .footer-info .email a {
+    font-size: 13px; color: #93c5fd; text-decoration: none;
+  }
+  .footer-info .email a:hover { text-decoration: underline; }
+  .footer-links {
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .footer-links a {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; text-decoration: none;
+    transition: opacity .2s;
+  }
+  .footer-links a:hover { opacity: 0.85; }
+  .footer-links .btn-yt   { background: #ff0000; color: #fff; }
+  .footer-links .btn-home { background: #3b82f6; color: #fff; }
+  .footer-links .btn-ai   { background: #7c3aed; color: #fff; }
+  .footer-copy {
+    max-width: 1100px; margin: 24px auto 0;
+    font-size: 11px; opacity: 0.35; text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -156,6 +195,30 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <p>후보자 이름을 입력하면 여론 데이터를 분석해드립니다</p>
   </div>
 </div>
+
+</div><!-- /container -->
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-info">
+      <div class="name">권혁용 연구위원</div>
+      <div class="role">AI선거전략연구소 연구위원</div>
+      <div class="email">✉️ <a href="mailto:hukyoung84@naver.com">hukyoung84@naver.com</a></div>
+    </div>
+    <div class="footer-links">
+      <a href="https://www.youtube.com/@KwonT_AI" target="_blank" class="btn-yt">
+        ▶ YouTube
+      </a>
+      <a href="https://litt.ly/levelupai" target="_blank" class="btn-home">
+        🏠 홈페이지
+      </a>
+      <a href="https://win-ai.kr/" target="_blank" class="btn-ai">
+        🏆 AI선거전략연구소
+      </a>
+    </div>
+  </div>
+  <div class="footer-copy">© 2026 권혁용 연구위원 · 여론 분석 서비스 · AI선거전략연구소</div>
+</footer>
 
 <script>
 async function analyze(e) {
